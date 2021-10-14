@@ -24,5 +24,4 @@ parse_git_branch() {
   fi
 }
 
-
 export PS1="\u:\001$green\002\w\001$yellow\002\$(parse_git_branch)\001$purple\002\$(parse_terraform_env)\001$no_colour\002 $ "
