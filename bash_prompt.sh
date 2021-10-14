@@ -10,7 +10,7 @@ parse_terraform_env() {
     if test -f ./.terraform/environment; then
       echo " <$(cat ./.terraform/environment)>"
     else
-      echo "<>"
+      echo " <>"
     fi
   fi
 }
