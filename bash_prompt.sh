@@ -16,7 +16,7 @@ parse_terraform_env() {
 }
 
 parse_git_branch() {
-  branch=$(git rev-parse --abbrev-ref HEAD)
+  branch=$(git branch --show-current)
   if [[ $branch == "" ]]; then
     echo ""
   else
