@@ -16,7 +16,13 @@ parse_terraform_env() {
 }
 
 parse_git_branch() {
-  git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/ (\1)/'
+  branch=$(git rev-parse --abbrev-ref HEAD)
+  if [[ $branch == "" ]]; then
+    echo ""
+  else
+    echo " ($branch)"
+  fi
 }
+
 
 export PS1="\u:\001$green\002\w\001$yellow\002\$(parse_git_branch)\001$purple\002\$(parse_terraform_env)\001$no_colour\002 $ "
