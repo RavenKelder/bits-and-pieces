@@ -16,7 +16,7 @@ parse_terraform_env() {
 }
 
 parse_git_branch() {
-  branch=$(git branch --show-current)
+  branch=$(git branch --show-current 2>/dev/null)
   if [[ $branch == "" ]]; then
     echo ""
   else
