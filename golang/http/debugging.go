@@ -1,5 +1,13 @@
 package http
 
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	nethttp "net/http"
+)
+
 // DebuggingTransport acts as a middleware to log requests that are being made.
 // Use by wrapping an existing http.Transport
 //
@@ -8,12 +16,12 @@ package http
 //   }
 //
 type DebuggingTransport struct {
-	http.RoundTripper
+	nethttp.RoundTripper
 }
 
 // RoundTrip performs a normal http request, and logs the results using package fmt.
 // The Method, URL, Header and Body are logged.
-func (c *customTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+func (t *DebuggingTransport) RoundTrip(req *nethttp.Request) (*nethttp.Response, error) {
 	data, err := json.MarshalIndent(req.Header, "        ", "  ")
 	if err != nil {
 		return nil, err
@@ -43,5 +51,6 @@ func (c *customTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 		req.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
 	}
 	fmt.Printf("REQ %v %v\nHeader: %v\nBody: %v\n", req.Method, req.URL.String(), string(data), body)
-	return c.RoundTripper.RoundTrip(req)
+	// Do not just do t.RoundTrip(req) since that makes this recursive.
+	return t.RoundTripper.RoundTrip(req)
 }
