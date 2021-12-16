@@ -1,4 +1,4 @@
-module http
+module github.com/RavenKelder/bits-and-pieces/golang/http
 
 go 1.16
 
