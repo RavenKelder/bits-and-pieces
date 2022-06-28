@@ -4,25 +4,43 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	nethttp "net/http"
+	"os"
 )
 
-// DebuggingTransport acts as a middleware to log requests that are being made.
-// Use by wrapping an existing http.Transport
+// NewDebuggingTransport Creates a new transport that logs to the specified
+// writer on any request that uses this transport. WARNING: This will write
+// out the request headers, including any authentication secrets.
 //
-//   httpTransport := &DebuggingTransport{
-//	   RoundTripper: baseHttpTransport,
-//   }
+//   httpTransport := NewDebuggingTransport(
+//     http.DefaultTransport,
+//     os.Stdout,
+//   )
 //
-type DebuggingTransport struct {
-	nethttp.RoundTripper
+//   client := http.Client{Transport: httpTransport}
+func NewDebuggingTransport(t nethttp.RoundTripper, writer io.Writer) *DebuggingTransport {
+	if writer == nil {
+		writer = os.Stdout
+	}
+	return &DebuggingTransport{
+		RoundTripper: t,
+		writer:       writer,
+	}
+
 }
 
-// RoundTrip performs a normal http request, and logs the results using package fmt.
+type DebuggingTransport struct {
+	nethttp.RoundTripper
+	writer io.Writer
+}
+
+// RoundTrip performs a normal http request, and writes the result to the writer.
 // The Method, URL, Header and Body are logged.
 func (t *DebuggingTransport) RoundTrip(req *nethttp.Request) (*nethttp.Response, error) {
-	data, err := json.MarshalIndent(req.Header, "        ", "  ")
+	// Marshal the header and body using indentation for readability.
+	header, err := json.MarshalIndent(req.Header, "  ", "  ")
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +59,7 @@ func (t *DebuggingTransport) RoundTrip(req *nethttp.Request) (*nethttp.Response,
 			return nil, err
 		}
 
-		bodyBytesIndented, err := json.MarshalIndent(bodyStruct, "", "  ")
+		bodyBytesIndented, err := json.MarshalIndent(bodyStruct, "  ", "  ")
 		if err != nil {
 			return nil, err
 		}
@@ -50,7 +68,26 @@ func (t *DebuggingTransport) RoundTrip(req *nethttp.Request) (*nethttp.Response,
 
 		req.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
 	}
-	fmt.Printf("REQ %v %v\nHeader: %v\nBody: %v\n", req.Method, req.URL.String(), string(data), body)
-	// Do not just do t.RoundTrip(req) since that makes this recursive.
+
+	// Create the output string, and output to the writer.
+	out := fmt.Sprintf(outputFormat, req.Method, req.URL.String(), string(header), body)
+	_, err = t.writer.Write([]byte(out))
+	if err != nil {
+		return nil, fmt.Errorf(
+			"failed to write to writer: %w",
+			err,
+		)
+	}
+
 	return t.RoundTripper.RoundTrip(req)
 }
+
+var outputFormat = `
+Method: %v
+URL: %v
+Header:
+  %v
+Body:
+  %v
+
+`
